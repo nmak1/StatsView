@@ -1,5 +1,6 @@
 package ru.netology.statsview.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -9,9 +10,11 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.withStyledAttributes
 import ru.netology.statsview.R
+import ru.netology.statsview.R.color.empty_color
 import ru.netology.statsview.utils.AndroidUtils
 import kotlin.math.min
 import kotlin.random.Random
+
 class StatsView @JvmOverloads constructor(
     context: Context,
     attributeSet: AttributeSet? = null,
@@ -48,6 +51,7 @@ class StatsView @JvmOverloads constructor(
             field = value
             invalidate()
         }
+    private var fullCircleDegrees = 360F
     private var radius = 0F
     private var center = PointF()
     private var oval = RectF()
@@ -60,6 +64,19 @@ class StatsView @JvmOverloads constructor(
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
     }
+
+    @SuppressLint("ResourceAsColor")
+    private val paintEmpty = Paint(
+        Paint.ANTI_ALIAS_FLAG
+    ).apply {
+        strokeWidth = lineWidth.toFloat()
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+        color = empty_color
+        alpha = 10
+    }
+
     private val textPaint = Paint(
         Paint.ANTI_ALIAS_FLAG
     ).apply {
@@ -85,19 +102,25 @@ class StatsView @JvmOverloads constructor(
         }
 
         var startAngle = -90F
+        canvas.drawArc(oval, startAngle, fullCircleDegrees, false, paintEmpty)
         data.forEachIndexed { index, datum ->
-            val angle = datum * 360F
+            val angle = (datum / data.maxOrNull()!!.times(data.count())) * fullCircleDegrees
             paint.color = colors.getOrElse(index) { generateRandomColor() }
             canvas.drawArc(oval, startAngle, angle, false, paint)
             startAngle += angle
         }
 
+        val text = (data.sum() / data.maxOrNull()!!.times(data.count())) * 100F
         canvas.drawText(
-            "%.2f%%".format(data.sum() * 100),
+            "%.2f%%".format(text),
             center.x,
             center.y + textPaint.textSize / 4,
             textPaint
         )
+        if (text == 100F) {
+            paint.color = colors[0]
+            canvas.drawArc(oval, startAngle, 1F, false, paint)
+        }
     }
 
     private fun generateRandomColor() = Random.nextInt(0xFF000000.toInt(), 0xFFFFFFFF.toInt())
